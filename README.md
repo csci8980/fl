@@ -11,7 +11,7 @@ python -m server
 
 In T2, start client
 ```shell
-python -m client
+python -m client1
 ```
 
 To start the "training", in the web browser for server (http://127.0.0.1:5000/), navigate to 
