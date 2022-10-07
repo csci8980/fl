@@ -54,7 +54,10 @@ def on_receive():
         mq.append(logger.get_str(f'Read value: {update}'))
         if remain_round > 0:
             mq.append(logger.get_str(f'Remain round: {remain_round}'))
-            redirect(url_for('next', filename=filename))
+            #redirect(url_for('next', filename=filename))
+            data = {'sender': 'server', 'filename': filename,'remain_round': remain_round}
+            mq.append(logger.get_str(f'Send {filename} to {client_1_url}'))
+            requests.post(url=client_1_url, json=data)
 
         return logger.get_str(f'Receive file from {sender}: {filename}')
 

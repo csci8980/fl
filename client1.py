@@ -34,6 +34,8 @@ def on_receive():
         sender = request.json['sender']
         filename = request.json['filename']
         remain_round = request.json['remain_round']
+        #app.logger.info("sender is %s",sender)
+
         lst = read_from_pickle(filename)
         mq.append(logger.get_str(f'Receive file from {sender}: {filename}'))
         mq.append(logger.get_str(f'Read value: {lst}'))
