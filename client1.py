@@ -5,9 +5,46 @@
 
 import requests
 from flask import Flask, request
-
 from flask_log import logger
-from utils import write_to_pickle, read_from_pickle, gen_file_name
+import torch
+from torchvision import datasets
+from torchvision.transforms import ToTensor
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from torch import optim
+from torch.autograd import Variable
+import pickle
+import torch.nn as nn
+
+class CNN(nn.Module):
+    def __init__(self):
+        super(CNN, self).__init__()
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(
+                in_channels=1,
+                out_channels=16,
+                kernel_size=5,
+                stride=1,
+                padding=2,
+            ),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2),
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(16, 32, 5, 1, 2),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+        )
+        # fully connected layer, output 10 classes
+        self.out = nn.Linear(32 * 7 * 7, 10)
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        # flatten the output of conv2 to (batch_size, 32 * 7 * 7)
+        x = x.view(x.size(0), -1)
+        output = self.out(x)
+        return output, x
+
 
 logger = logger('Client 1')
 server_url = 'http://127.0.0.1:5000/server-receive'
@@ -15,9 +52,80 @@ mq = [logger.get_str('Client start. ')]
 
 app = Flask(__name__)
 
+train_data = datasets.MNIST(root = 'data',train = True,transform = ToTensor(),download = True,)
+test_data = datasets.MNIST(root = 'data',train = False,transform = ToTensor())
 
-def double(lst):
-    return [i * 2 for i in lst]
+train_data1, train_data2 = torch.utils.data.random_split(train_data, [12000,48000])
+test_data1, test_data2 = torch.utils.data.random_split(test_data, [2000,8000])
+
+train_data = train_data1
+test_data = test_data1
+
+def train(num_epochs, cnn, loaders):
+    loss_func = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(cnn.parameters(), lr = 0.01)
+
+    cnn.train()
+    # Train the model
+    total_step = len(loaders['train'])
+
+    for epoch in range(num_epochs):
+        for i, (images, labels) in enumerate(loaders['train']):
+
+            # gives batch data, normalize x when iterate train_loader
+            b_x = Variable(images)   # batch x
+            b_y = Variable(labels)   # batch y
+            output = cnn(b_x)[0]
+            loss = loss_func(output, b_y)
+
+            # clear gradients for this training step
+            optimizer.zero_grad()
+
+            # backpropagation, compute gradients
+            loss.backward()
+            # apply gradients
+            optimizer.step()
+
+            if (i+1) % 100 == 0:
+                mq.append(logger.get_str(f'Epoch is {epoch+1} Loss is {loss.item()}'))
+                #print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' .format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
+                pass
+        pass
+    pass
+
+def test(model,loaders):
+    model.eval()
+    with torch.no_grad():
+        correct = 0
+        total = 0
+        for images, labels in loaders['test']:
+            test_output, last_layer = model(images)
+            pred_y = torch.max(test_output, 1)[1].data.squeeze()
+            accuracy = (pred_y == labels).sum().item() / float(labels.size(0))
+            pass
+        return accuracy
+
+
+
+def update_model(model):
+    loaders = {
+    'train' : torch.utils.data.DataLoader(train_data,
+                                          batch_size=100,
+                                          shuffle=True,
+                                          num_workers=1),
+
+    'test'  : torch.utils.data.DataLoader(test_data,
+                                          batch_size=100,
+                                          shuffle=True,
+                                          num_workers=1),}
+
+
+    num_epochs = 10
+    train(num_epochs, model, loaders)
+    accuracy = test(model,loaders)
+    mq.append(logger.get_str(f'Current accuracy is  {accuracy}'))
+
+    return model,accuracy
 
 
 @app.route('/')
@@ -31,24 +139,25 @@ def home():
 @app.route('/client-receive', methods=['POST'])
 def on_receive():
     if request.method == 'POST':
-        sender = request.json['sender']
-        filename = request.json['filename']
-        remain_round = request.json['remain_round']
+        pickled_data = request.get_data()
+        data_list = pickle.loads(pickled_data)
+
+        sender = data_list[0]
+        model = data_list[1]
+        num_of_client = data_list[2]
         #app.logger.info("sender is %s",sender)
+        mq.append(logger.get_str(f'Receive file from {sender}'))
 
-        lst = read_from_pickle(filename)
-        mq.append(logger.get_str(f'Receive file from {sender}: {filename}'))
-        mq.append(logger.get_str(f'Read value: {lst}'))
+        #update model
+        updated_model,accuracy = update_model(model)
 
-        update = double(lst)
-        filename = gen_file_name('client_1')
-        write_to_pickle(update, filename)
-        remain_round -= 1
+        #send to server
+        data_list = [0,updated_model,accuracy]
+        pickled_data = pickle.dumps(data_list)
+        requests.post(url=server_url, data=pickled_data)
+        mq.append(logger.get_str(f'Send model from cilent 1'))
 
-        data = {'sender': 'server', 'filename': filename, 'remain_round': remain_round}
-        requests.post(url=server_url, json=data)
-
-        return logger.get_str(f'Receive file from {sender}: {filename}')
+        return logger.get_str(f'Receive file from {sender}')
 
 
 if __name__ == '__main__':

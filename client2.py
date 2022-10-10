@@ -2,12 +2,11 @@
  python -m client2
 '''
 
-import time
 import requests
+import json
 from flask import Flask, request
-
 from flask_log import logger
-from utils import write_to_pickle, read_from_pickle, gen_file_name
+import torch
 
 logger = logger('Client 2')
 server_url = 'http://127.0.0.1:5000/server-receive'
@@ -17,7 +16,6 @@ app = Flask(__name__)
 
 
 def add_one(lst):
-    time.sleep(5)
     return [i + 1 for i in lst]
 
 
@@ -32,23 +30,26 @@ def home():
 @app.route('/client-receive', methods=['POST'])
 def on_receive():
     if request.method == 'POST':
-        sender = request.json['sender']
-        filename = request.json['filename']
-        remain_round = request.json['remain_round']
+        json_data = request.get_json()
+        data_list = json.loads(json_data)
 
-        model = read_from_pickle(filename)
-        mq.append(logger.get_str(f'Receive file from {sender}: {filename}'))
-        mq.append(logger.get_str(f'Read value: {model}'))
+        sender = data_list[0]
+        model = data_list[1]
+        remain_round = data_list[2]
+        #app.logger.info("sender is %s",sender)
+        mq.append(logger.get_str(f'Receive file from {sender}'))
 
-        update = add_one(model)
-        filename = gen_file_name('client_2')
-        write_to_pickle(update, filename)
+        #update model
+        updated_model = add_one(model)
         remain_round -= 1
 
-        data = {'sender': 'server', 'filename': filename, 'remain_round': remain_round}
-        requests.post(url=server_url, json=data)
+        #send to server
+        data_list = [1,updated_model,remain_round]
+        json_data = json.dumps(data_list)
+        requests.post(url=server_url, json=json_data)
+        mq.append(logger.get_str(f'Send model from client 2'))
 
-        return 'client 2 receive return'
+        return logger.get_str(f'Receive file from {sender}')
 
 
 if __name__ == '__main__':
