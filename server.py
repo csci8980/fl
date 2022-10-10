@@ -4,7 +4,6 @@
 '''
 
 import requests
-import json
 from flask import Flask, redirect, url_for, request
 from flask_log import logger
 import torch
@@ -16,16 +15,21 @@ import pickle
 logger = logger('Server')
 mq = [logger.get_str('Server start. ')]
 
-num_of_client = 1
+#client numbers and URL
+num_of_client = 2
 client_url = []
 for i in range(num_of_client):
     client_url.append('http://127.0.0.1:500'+ str(i+1) + '/client-receive')
-    #= ['http://127.0.0.1:5001/client-receive','http://127.0.0.1:5002/client-receive']
+#ML model parameters
 count = 0
 model_list = [[] for _ in range(num_of_client)]
+accuracy_list = [0 for _ in range(num_of_client)]
+remain_epoch = 10
+desired_accuracy = 0.95
 
 app = Flask(__name__)
 
+#ML model abstraction
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
@@ -55,18 +59,25 @@ class CNN(nn.Module):
         output = self.out(x)
         return output, x    # return x for visualization
 
-
+#FedAvg algorithm
 def FedAvg(models):
     n = len(models)
-    sum = [0 for _ in range(10)]
-    for model in models:
-        for i in range(10):
-            sum[i] = sum[i] + model[i]
+    avg_model = models[0]
+    sd_avg_model = avg_model.state_dict()
 
-    average_model = [i/n for i in sum]
-    return average_model
+    for i in range(1,n):
+        sd_model = models[i].state_dict()
+        for key in sd_model:
+            sd_avg_model[key] = sd_avg_model[key] + sd_model[key]
 
+    for key in sd_avg_model:
+        sd_avg_model[key] = sd_avg_model[key]/n
 
+    new_model = CNN()
+    new_model.load_state_dict(sd_avg_model)
+    return new_model
+
+#home page
 @app.route('/')
 def home():
     html = '<h1>Server Homepage</h1>'
@@ -75,15 +86,16 @@ def home():
 
     return html
 
-
+#page for ML program to start
 @app.route('/start')
 def start():
+    #create ML model
     model = CNN()
     mq.append(logger.get_str(f'Init model: {model}'))
 
+    #wrap data with pickle
     data_list = ['server',model,num_of_client]
     pickled_data = pickle.dumps(data_list)
-    #data = {'sender': 'server', 'model': json_model, 'remain_round': iter_round}
 
     #send data
     for i in range(num_of_client):
@@ -92,35 +104,43 @@ def start():
 
     return redirect(url_for('home'))
 
-
+#page to receive ML models from clients and send new averaged model
 @app.route('/server-receive', methods=['POST'])
 def on_receive():
-    global count
-
+    global count, remain_epoch
+    #receive updated ML models from clients
     if request.method == 'POST':
+
         pickled_data = request.get_data()
         data_list = pickle.loads(pickled_data)
         sender_index = data_list[0]
         model_list[sender_index] = data_list[1]
-        accuracy = data_list[2]
+        accuracy_list[sender_index] = data_list[2]
         count = count + 1
-        mq.append(logger.get_str(f'Receive data from client : {sender_index} {accuracy}'))
+        mq.append(logger.get_str(f'Receive data from client : {sender_index}'))
 
+    #check if all models from clients return to server
+    if count == num_of_client:
+        #do FedAvg
+        new_model = FedAvg(model_list)
+        current_accuracy = sum(accuracy_list)/len(accuracy_list)
+        count = 0
+        remain_epoch -= 1
 
-#    if count == num_of_client:
-#        model = FedAvg(model_list)
-#        count = 0
-#
-#        if remain_round > 0:
-#            mq.append(logger.get_str(f'Remain round: {remain_round}'))
-#
-#            for i in range(num_of_client):
-#                data_list = ['server',model,remain_round]
-#                json_data = json.dumps(data_list)
-#                requests.post(url=client_url[i], json=json_data)
-#                mq.append(logger.get_str(f'Send to {client_url[i]} with model {model}'))
+        #send new models
+        if remain_epoch > 0 and current_accuracy < desired_accuracy:
+            mq.append(logger.get_str(f'Remain epoch: {remain_epoch}'))
 
-    return logger.get_str(f'Receive file')
+            for i in range(num_of_client):
+                data_list = ['server',new_model,num_of_client]
+                pickled_data = pickle.dumps(data_list)
+                requests.post(url=client_url[i], data=pickled_data)
+                mq.append(logger.get_str(f'Send to {client_url[i]} with model {new_model}'))
+
+        else:
+            mq.append(logger.get_str(f'Federated Learning is finished with {10 - remain_epoch} epochs and accuracy is {current_accuracy}'))
+
+    return logger.get_str(f'Receive data')
 
 
 if __name__ == '__main__':

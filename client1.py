@@ -14,8 +14,24 @@ from torch.utils.data import DataLoader
 from torch import optim
 from torch.autograd import Variable
 import pickle
-import torch.nn as nn
 
+logger = logger('Client 1')
+mq = [logger.get_str('Client start. ')]
+
+server_url = 'http://127.0.0.1:5000/server-receive'
+
+app = Flask(__name__)
+
+#load data for this client
+train_data = datasets.MNIST(root = 'data',train = True,transform = ToTensor(),download = True,)
+test_data = datasets.MNIST(root = 'data',train = False,transform = ToTensor())
+train_data1, train_data2 = torch.utils.data.random_split(train_data, [12000,48000])
+test_data1, test_data2 = torch.utils.data.random_split(test_data, [2000,8000])
+train_data = train_data1
+test_data = test_data1
+
+
+#ML model abstraction
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
@@ -46,21 +62,7 @@ class CNN(nn.Module):
         return output, x
 
 
-logger = logger('Client 1')
-server_url = 'http://127.0.0.1:5000/server-receive'
-mq = [logger.get_str('Client start. ')]
-
-app = Flask(__name__)
-
-train_data = datasets.MNIST(root = 'data',train = True,transform = ToTensor(),download = True,)
-test_data = datasets.MNIST(root = 'data',train = False,transform = ToTensor())
-
-train_data1, train_data2 = torch.utils.data.random_split(train_data, [12000,48000])
-test_data1, test_data2 = torch.utils.data.random_split(test_data, [2000,8000])
-
-train_data = train_data1
-test_data = test_data1
-
+#ML train function
 def train(num_epochs, cnn, loaders):
     loss_func = nn.CrossEntropyLoss()
     optimizer = optim.Adam(cnn.parameters(), lr = 0.01)
@@ -87,12 +89,14 @@ def train(num_epochs, cnn, loaders):
             optimizer.step()
 
             if (i+1) % 100 == 0:
-                mq.append(logger.get_str(f'Epoch is {epoch+1} Loss is {loss.item()}'))
+                mq.append(logger.get_str(f'Epoch is {epoch+1}. Loss is {loss.item()}'))
                 #print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' .format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
                 pass
         pass
     pass
 
+
+#ML test function
 def test(model,loaders):
     model.eval()
     with torch.no_grad():
@@ -106,28 +110,17 @@ def test(model,loaders):
         return accuracy
 
 
-
+#load data, train and test model
 def update_model(model):
-    loaders = {
-    'train' : torch.utils.data.DataLoader(train_data,
-                                          batch_size=100,
-                                          shuffle=True,
-                                          num_workers=1),
+    loaders = {'train' : torch.utils.data.DataLoader(train_data,batch_size=100,shuffle=True,num_workers=1),
+                'test'  : torch.utils.data.DataLoader(test_data,batch_size=100,shuffle=True,num_workers=1),}
 
-    'test'  : torch.utils.data.DataLoader(test_data,
-                                          batch_size=100,
-                                          shuffle=True,
-                                          num_workers=1),}
-
-
-    num_epochs = 10
+    num_epochs = 1
     train(num_epochs, model, loaders)
     accuracy = test(model,loaders)
-    mq.append(logger.get_str(f'Current accuracy is  {accuracy}'))
-
     return model,accuracy
 
-
+#home page
 @app.route('/')
 def home():
     html = '<h1>Client 1 Homepage</h1>'
@@ -135,18 +128,17 @@ def home():
         html = html + f'<p>{m}</p>'
     return html
 
-
+#page for client to receive data and send data
 @app.route('/client-receive', methods=['POST'])
 def on_receive():
     if request.method == 'POST':
+        #receive data from server
         pickled_data = request.get_data()
         data_list = pickle.loads(pickled_data)
-
         sender = data_list[0]
         model = data_list[1]
         num_of_client = data_list[2]
-        #app.logger.info("sender is %s",sender)
-        mq.append(logger.get_str(f'Receive file from {sender}'))
+        mq.append(logger.get_str(f'Receive data from {sender}'))
 
         #update model
         updated_model,accuracy = update_model(model)
@@ -157,7 +149,7 @@ def on_receive():
         requests.post(url=server_url, data=pickled_data)
         mq.append(logger.get_str(f'Send model from cilent 1'))
 
-        return logger.get_str(f'Receive file from {sender}')
+        return logger.get_str(f'Receive data from {sender}')
 
 
 if __name__ == '__main__':
