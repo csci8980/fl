@@ -9,10 +9,14 @@
 6) Server performs a FedAvg algorithm to aggregate clients' model, calculates the average accuracy from clients accuracy
 7) The above step 3,4,5,6 are repeated until maximum iteration (set to be 10) or desired average accuracy (set to be 0.98) is reached
 
-To run toy example, open three terminals, say T1, T2 and T3
+To run toy example, 
+
+Open server.py, change num_of_client (line 19) to be 3
+
+open three terminals, say T1, T2 and T3
 
 In T1, start server
-change num_of_clients to be 3
+
 ```shell
 python -m server
 ```
