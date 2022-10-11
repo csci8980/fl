@@ -1,5 +1,14 @@
 # Federated Learning with MNIST
 
+## Technique steps
+1) All clients create their own sub-MNIST data from Pytorch dataset
+2) Server initilizes a CNN model with Pytorch framework
+3) Server sends the model (wraped by pickle) to each client
+4) Each client trains the model with their own MNIST dataset, report accuracy on its own test dataset
+5) Each client sends their own updated model and local accuracy to server
+6) Server perform a FedAvg to aggregate clients' model, calculate the average accuracy from clients accuracy
+7) The above step 3,4,5,6 are repeated util maximum iteration (set to be 10) or desired average accuracy (set to be 0.98) is reached
+
 To run toy example, open three terminals, say T1, T2 and T3
 
 In T1, start server
@@ -23,6 +32,7 @@ http://127.0.0.1:5000/start
 ```
 
 The result of server side is shown in http://127.0.0.1:5000/
+
 The result of clients side are shown in http://127.0.0.1:5001/  http://127.0.0.1:5001/   http://127.0.0.1:5002/ ...
 
 
