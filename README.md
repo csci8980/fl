@@ -37,9 +37,9 @@ To start the "training", in the web browser for server (http://127.0.0.1:5000/),
 http://127.0.0.1:5000/start
 ```
 
-The result of server side is shown in http://127.0.0.1:5000/
+The result of server is shown in http://127.0.0.1:5000/
 
-The result of clients side are shown in http://127.0.0.1:5001/  http://127.0.0.1:5001/   http://127.0.0.1:5002/ ...
+The result of clients are shown in http://127.0.0.1:5001/  http://127.0.0.1:5001/   http://127.0.0.1:5002/ ...
 
 
 ## Runtime example
