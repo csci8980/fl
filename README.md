@@ -4,14 +4,15 @@
 1) All clients create their own sub-MNIST data from Pytorch dataset
 2) Server initilizes a CNN model with Pytorch framework
 3) Server sends the model (wrapped by pickle) to each client
-4) Each client trains the model with their own MNIST dataset, report accuracy on its own test dataset
-5) Each client sends their own updated model and local accuracy to server
-6) Server perform a FedAvg to aggregate clients' model, calculate the average accuracy from clients accuracy
-7) The above step 3,4,5,6 are repeated util maximum iteration (set to be 10) or desired average accuracy (set to be 0.98) is reached
+4) Each client trains the model with its own MNIST dataset, reports accuracy on its own test dataset
+5) Each client sends its own updated model and local accuracy to server
+6) Server performs a FedAvg algorithm to aggregate clients' model, calculates the average accuracy from clients accuracy
+7) The above step 3,4,5,6 are repeated until maximum iteration (set to be 10) or desired average accuracy (set to be 0.98) is reached
 
 To run toy example, open three terminals, say T1, T2 and T3
 
 In T1, start server
+change num_of_clients to be 3
 ```shell
 python -m server
 ```
