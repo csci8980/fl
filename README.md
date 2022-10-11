@@ -22,9 +22,9 @@ http://127.0.0.1:5000/start
 
 A sample log on webpage with 3 clients is shown as below:
 
-#Server Side
+# Server Side
 
-##Server Homepage
+## Server Homepage
 [21:12:20]-[Server]: Server start.
 
 [21:12:32]-[Server]: Init a ML model: CNN( (conv1): Sequential( (0): Conv2d(1, 16, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2)) (1): ReLU() (2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False) ) (conv2): Sequential( (0): Conv2d(16, 32, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2)) (1): ReLU() (2): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False) ) (out): Linear(in_features=1568, out_features=10, bias=True) )
@@ -78,9 +78,9 @@ A sample log on webpage with 3 clients is shown as below:
 [21:14:42]-[Server]: Federated Learning is finished with 3 epochs and accuracy is 0.98
 
 
-#Client Side
+# Client Side (shown client 1 as sample)
 
-##Client 1 Homepage
+## Client 1 Homepage
 [21:12:24]-[Client 1]: Client start.
 
 [21:12:32]-[Client 1]: Receive model from server
