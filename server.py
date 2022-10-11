@@ -16,7 +16,7 @@ logger = logger('Server')
 mq = [logger.get_str('Server start. ')]
 
 #client numbers and URL
-num_of_client = 2
+num_of_client = 5
 client_url = []
 for i in range(num_of_client):
     client_url.append('http://127.0.0.1:500'+ str(i+1) + '/client-receive')
@@ -25,7 +25,7 @@ count = 0
 model_list = [[] for _ in range(num_of_client)]
 accuracy_list = [0 for _ in range(num_of_client)]
 remain_epoch = 10
-desired_accuracy = 0.95
+desired_accuracy = 0.98
 
 app = Flask(__name__)
 
@@ -61,6 +61,7 @@ class CNN(nn.Module):
 
 #FedAvg algorithm
 def FedAvg(models):
+    mq.append(logger.get_str(f'Performing FedAvg for epoch: {10 - remain_epoch}'))
     n = len(models)
     avg_model = models[0]
     sd_avg_model = avg_model.state_dict()
@@ -91,7 +92,7 @@ def home():
 def start():
     #create ML model
     model = CNN()
-    mq.append(logger.get_str(f'Init model: {model}'))
+    mq.append(logger.get_str(f'Init a ML model: {model}'))
 
     #wrap data with pickle
     data_list = ['server',model,num_of_client]
@@ -99,8 +100,8 @@ def start():
 
     #send data
     for i in range(num_of_client):
-        requests.post(url=client_url[i], data = pickled_data)
         mq.append(logger.get_str(f'Send model to {client_url[i]}'))
+        requests.post(url=client_url[i], data = pickled_data)
 
     return redirect(url_for('home'))
 
@@ -129,18 +130,18 @@ def on_receive():
 
         #send new models
         if remain_epoch > 0 and current_accuracy < desired_accuracy:
-            mq.append(logger.get_str(f'Remain epoch: {remain_epoch}'))
+            mq.append(logger.get_str(f'Remaining global epoch: {remain_epoch}'))
 
             for i in range(num_of_client):
                 data_list = ['server',new_model,num_of_client]
                 pickled_data = pickle.dumps(data_list)
+                mq.append(logger.get_str(f'Send to {client_url[i]} with new model'))
                 requests.post(url=client_url[i], data=pickled_data)
-                mq.append(logger.get_str(f'Send to {client_url[i]} with model {new_model}'))
 
         else:
             mq.append(logger.get_str(f'Federated Learning is finished with {10 - remain_epoch} epochs and accuracy is {current_accuracy}'))
 
-    return logger.get_str(f'Receive data')
+    return ('',204)
 
 
 if __name__ == '__main__':

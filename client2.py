@@ -26,9 +26,10 @@ app = Flask(__name__)
 train_data = datasets.MNIST(root = 'data',train = True,transform = ToTensor(),download = True,)
 test_data = datasets.MNIST(root = 'data',train = False,transform = ToTensor())
 train_data1, train_data2 = torch.utils.data.random_split(train_data, [12000,48000])
-test_data1, test_data2 = torch.utils.data.random_split(test_data, [2000,8000])
+test_data1, test_data2 = torch.utils.data.random_split(test_data, [5000,5000])
 train_data = train_data1
 test_data = test_data1
+del train_data2
 
 
 #ML model abstraction
@@ -64,6 +65,7 @@ class CNN(nn.Module):
 
 #ML train function
 def train(num_epochs, cnn, loaders):
+    mq.append(logger.get_str(f'Local training starts'))
     loss_func = nn.CrossEntropyLoss()
     optimizer = optim.Adam(cnn.parameters(), lr = 0.01)
 
@@ -89,7 +91,7 @@ def train(num_epochs, cnn, loaders):
             optimizer.step()
 
             if (i+1) % 100 == 0:
-                mq.append(logger.get_str(f'Epoch is {epoch+1}. Loss is {loss.item()}'))
+                mq.append(logger.get_str(f'Local epoch is {epoch+1}. Loss is {loss.item()}'))
                 #print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' .format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
                 pass
         pass
@@ -115,7 +117,7 @@ def update_model(model):
     loaders = {'train' : torch.utils.data.DataLoader(train_data,batch_size=100,shuffle=True,num_workers=1),
                 'test'  : torch.utils.data.DataLoader(test_data,batch_size=100,shuffle=True,num_workers=1),}
 
-    num_epochs = 1
+    num_epochs = 2
     train(num_epochs, model, loaders)
     accuracy = test(model,loaders)
     return model,accuracy
@@ -138,7 +140,7 @@ def on_receive():
         sender = data_list[0]
         model = data_list[1]
         num_of_client = data_list[2]
-        mq.append(logger.get_str(f'Receive data from {sender}'))
+        mq.append(logger.get_str(f'Receive model from {sender}'))
 
         #update model
         updated_model,accuracy = update_model(model)
@@ -146,10 +148,10 @@ def on_receive():
         #send to server
         data_list = [1,updated_model,accuracy]
         pickled_data = pickle.dumps(data_list)
+        mq.append(logger.get_str(f'Send model from cilent 2'))
         requests.post(url=server_url, data=pickled_data)
-        mq.append(logger.get_str(f'Send updated model from cilent 2'))
 
-        return logger.get_str(f'Receive data from {sender}')
+        return ('',204)
 
 
 if __name__ == '__main__':

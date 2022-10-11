@@ -15,7 +15,7 @@ from torch import optim
 from torch.autograd import Variable
 import pickle
 
-logger = logger('Client 1')
+logger = logger('Client 17')
 mq = [logger.get_str('Client start. ')]
 
 server_url = 'http://127.0.0.1:5000/server-receive'
@@ -146,13 +146,13 @@ def on_receive():
         updated_model,accuracy = update_model(model)
 
         #send to server
-        data_list = [0,updated_model,accuracy]
+        data_list = [16,updated_model,accuracy]
         pickled_data = pickle.dumps(data_list)
-        mq.append(logger.get_str(f'Send model from cilent 1'))
+        mq.append(logger.get_str(f'Send model from cilent 17'))
         requests.post(url=server_url, data=pickled_data)
 
         return ('',204)
 
 
 if __name__ == '__main__':
-    app.run(port=5001, debug=True)
+    app.run(port=5017, debug=True)
