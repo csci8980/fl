@@ -1,4 +1,4 @@
-# fl
+# Federated Learning with MNIST
 
 To run toy example, open three terminals, say T1, T2 and T3
 
