@@ -3,7 +3,7 @@
 ## Technique steps
 1) All clients create their own sub-MNIST data from Pytorch dataset
 2) Server initilizes a CNN model with Pytorch framework
-3) Server sends the model (wraped by pickle) to each client
+3) Server sends the model (wrapped by pickle) to each client
 4) Each client trains the model with their own MNIST dataset, report accuracy on its own test dataset
 5) Each client sends their own updated model and local accuracy to server
 6) Server perform a FedAvg to aggregate clients' model, calculate the average accuracy from clients accuracy
