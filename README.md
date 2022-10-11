@@ -1,8 +1,6 @@
 # fl
 
-10/07
-
-To run toy example, open two terminal, say T1 and T2
+To run toy example, open three terminals, say T1, T2 and T3
 
 In T1, start server
 ```shell
@@ -14,10 +12,18 @@ In T2, start client
 python -m client1
 ```
 
+In T2, start client
+```shell
+python -m client2
+```
+
 To start the "training", in the web browser for server (http://127.0.0.1:5000/), navigate to 
 ```
 http://127.0.0.1:5000/start
 ```
+
+The result of server side is shown in http://127.0.0.1:5000/
+The result of clients side are shown in http://127.0.0.1:5001/  http://127.0.0.1:5001/   http://127.0.0.1:5002/ ...
 
 
 A sample log on webpage with 3 clients is shown as below:
