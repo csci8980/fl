@@ -1,6 +1,5 @@
 '''
- flask --app flask_starter --debug run
- python -m flask_starter
+ python -m client 5001
 '''
 
 import requests
