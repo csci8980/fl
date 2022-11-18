@@ -1,0 +1,6 @@
+torch
+torchvision
+flask
+requests
+numpy
+pandas
