@@ -16,6 +16,7 @@ from CNN import CNN
 from FedAvg import fed_avg
 from client import Client
 from logger import Logger
+import random
 
 app = Flask(__name__)
 
@@ -25,7 +26,7 @@ app = Flask(__name__)
 def home():
     html = '<h1>Server Homepage</h1>'
     html += f'''
-    <button onclick="window.location.href='http://127.0.0.1:{server_port}/start';"> 
+    <button onclick="window.location.href='http://127.0.0.1:{server_port}/start';">
         Start
     </button>
     '''
@@ -54,7 +55,9 @@ def register(client_port):
             client_port = int(request.args.get('client_port'))
             client = Client(_id_=client_port, host=client_host, port=client_port)
             client_dict[client.id] = client
+            dropout_dict[client_port] = 0
             mq.append(logger.get_str(f'Register client {client.id} with url: {client.url}'))
+            mq.append(logger.get_str(f'{dropout_dict}'))
             dashboard.loc[client.id] = np.nan
             # client info
             dashboard.loc[client.id, 'train_count'] = request.args.get('train_count')
@@ -76,37 +79,45 @@ def thread_send_model(cid, curr_epoch, pickled_model):
 # broadcast model and wait for client response in a multi-thread way
 def broadcast_model(model, curr_epoch):
     pickled_model = pickle.dumps(model)
-    with ThreadPoolExecutor(max_workers=6) as thread_pool:
-        futures = [thread_pool.submit(thread_send_model, c, curr_epoch, pickled_model) for c in client_dict]
+
+    with ThreadPoolExecutor(max_workers=10) as thread_pool:
+        if curr_epoch == 0:
+            futures = [thread_pool.submit(thread_send_model, c, curr_epoch, pickled_model) for c in client_dict]
+        else:
+            current_client_dict = {}
+            for client_port in client_dict:
+                if dropout_dict[client_port] == 0:
+                    current_client_dict[client_port] = client_dict[client_port]
+            futures = [thread_pool.submit(thread_send_model, c, curr_epoch, pickled_model) for c in current_client_dict]
 
         try:
             # iterate future objects with a timeout on the first task completing
-            for future in as_completed(futures, timeout=server_timeout_second):  # a future object will be returned once a thread job finish
+            for future in as_completed(futures, timeout=server_timeout_second):# a future object will be returned once a thread job finish
                 response = future.result()
-                assert isinstance(response, requests.Response)
                 if response.status_code == 200:
                     client_return_json = response.json()
                     port = client_return_json['client_port']
                     accuracy = client_return_json['accuracy']
-                    signup_dict[curr_epoch].add(port)
+
+                    good_dict[curr_epoch].add(port)
                     dashboard.at[port, curr_epoch] = accuracy
                     mq.append(logger.get_str(f'Epoch {curr_epoch}: Receive in-time response from {port}'))
                     # check if reach the minimum requirement for quorum, if so, break
-                    if len(signup_dict[curr_epoch]) >= min_quorum_requirement:
-                        print(f'\nEpoch {curr_epoch}: Reach minimum quorum requirement before timeout. Break.\n')
-                        mq.append(logger.get_str(f'Epoch {curr_epoch}: Reach minimum quorum requirement before timeout.'))
-                        break
+                    if len(signup_dict[curr_epoch]) < min_quorum_requirement:
+                        print("I am here")
+                        signup_dict[curr_epoch].add(port)
+                        mq.append(logger.get_str(f'Epoch {curr_epoch}: Add in-time response from {port} to FedAvg pool as min quorum has not reach'))
+
+            mq.append(logger.get_str(f'Epoch {curr_epoch}: Receive {len(good_dict[curr_epoch])} in-time response'))
+            return True
 
         except concurrent.futures.TimeoutError:  # raise when timeout exceed
             if len(signup_dict[curr_epoch]) < min_quorum_requirement:
-                print(f'\nEpoch {curr_epoch}: Not enough quorum before timeout ({len(signup_dict[curr_epoch])}/{min_quorum_requirement})\n')
                 mq.append(logger.get_str(f'Epoch {curr_epoch}: Not enough quorum before timeout ({len(signup_dict[curr_epoch])}/{min_quorum_requirement})'))
                 return False
             else:
-                print(f'\nEpoch {curr_epoch}: Receive {len(signup_dict[curr_epoch])} before timeout \n')
-
-    mq.append(logger.get_str(f'Epoch {curr_epoch}: Receive {len(signup_dict[curr_epoch])} in-time response'))
-    return True
+                mq.append(logger.get_str(f'Epoch {curr_epoch}: Receive {len(good_dict[curr_epoch])} in-time response'))
+                return True
 
 
 # starting point of entire FL process
@@ -119,19 +130,35 @@ def start():
     while curr_epoch < total_epoch:
         print(f'\n Current epoch {curr_epoch}/{total_epoch} \n')
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Start epoch {curr_epoch}/{total_epoch}'))
+
+        for client_port in dropout_dict:
+            if dropout_dict[client_port] == 1 and random.random() < 0.5:
+                dropout_dict[client_port] = 0
+                mq.append(logger.get_str(f' Rejoin client : {client_port}'))
+
         is_broadcast_success = broadcast_model(model, curr_epoch)
+
         if not is_broadcast_success:  # break and abort FL if not enough quorums received from broadcasting
             mq.append(logger.get_str(f'Federated learning aborts at epoch {curr_epoch} for not enough quorum'))
             break
+
         curr_min_accuracy = dashboard[curr_epoch].min()
         mq.append(logger.get_str(f'Epoch {curr_epoch}: current accuracy {curr_min_accuracy}'))
         if curr_min_accuracy >= desired_accuracy:  # break if reach desired accuracy
             break
         else:
             in_time_client = signup_dict[curr_epoch]
+            print(signup_dict[curr_epoch])
             in_time_model = [model_dict[curr_epoch][c] for c in in_time_client]
             mq.append(logger.get_str(f'Epoch {curr_epoch}: Do FedAvg with {len(in_time_model)} models'))
             model = fed_avg(in_time_model)
+
+            arrive_client = good_dict[curr_epoch]
+            for client_port in client_dict:
+                if client_port not in arrive_client:
+                    dropout_dict[client_port] = 1
+                    mq.append(logger.get_str(f'{curr_epoch} epochs has {client_port} in dropout client list'))
+
             curr_epoch += 1
 
     mq.append(logger.get_str(f'Federated learning ends after {curr_epoch} epochs with accuracy {curr_min_accuracy}'))
@@ -149,7 +176,7 @@ def on_receive(port):
         model = pickle.loads(pickled_model)
         assert isinstance(model, CNN)
         model_dict[client_epoch][client_port] = model
-        mq.append(logger.get_str(f'Epoch {client_epoch}: Receive data from client : {client_port}'))
+        #mq.append(logger.get_str(f'Epoch {client_epoch}: Receive data from client: {client_port}'))
 
     return 'Returned from server on_receive'
 
@@ -175,10 +202,12 @@ if __name__ == '__main__':
 
     # init client model cache
     model_dict = {i: {} for i in range(total_epoch)}
-    signup_dict = {i: set() for i in range(total_epoch)}  # in-time client response
+    signup_dict = {i: set() for i in range(total_epoch)}  #client who will perform FedAvg
+    good_dict = {i:set() for i in range(total_epoch)} #client who arrive in-time
 
     # init client registration
     client_dict = {}
+    dropout_dict = {}
 
     # init logger, mq and dashboard
     logger = Logger('Server')

@@ -45,7 +45,7 @@ app = Flask(__name__)
 def home():
     html = '<h1>Client Homepage</h1>'
     html += f'''
-    <button onclick="window.location.href='{client_host}:{client_port}/register';"> 
+    <button onclick="window.location.href='{client_host}:{client_port}/register';">
         Register
     </button>
     '''
