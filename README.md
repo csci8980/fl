@@ -19,7 +19,7 @@
 
 ## Screenshot
 
-Following is an example running with timeout and quorum setting.
+Following is an example running with timeout, quorum setting and client dropout and rejoin.
 
 Basic setting can be found in the first few lines before the table. 
 
