@@ -29,4 +29,4 @@ For example, epoch 0 proceeds with 3 in-time responses from client 5001, 5002 an
 
 Epoch 8 has only 2 in-time responses from client 5002 and 5005. The learning aborts.
 
-![](screenshot/result.pdf)
+![](screenshot/result_Page_1.png)
