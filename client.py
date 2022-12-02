@@ -5,8 +5,6 @@
 import argparse
 import configparser
 import pickle
-import random
-import time
 
 import requests
 from flask import Flask, request, redirect, url_for, jsonify
@@ -28,13 +26,6 @@ class Client:
         self.host = host
         self.port = port
         self.url = host + f':{port}/client-receive'
-
-
-def random_sleep(prob, sleep_time):
-    if random.random() < prob:
-        mq.append(logger.get_str(f"Sleep {sleep_time} seconds"))
-        time.sleep(sleep_time)
-        mq.append(logger.get_str("Wake up"))
 
 
 app = Flask(__name__)
@@ -82,9 +73,6 @@ def on_receive():
         curr_epoch = int(request.args.get('curr_epoch'))
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Receive model from server'))
 
-        # random sleep
-        random_sleep(client_sleep_prob, client_sleep_second)
-
         # update model
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Start client training'))
         updated_model, accuracy = update_model(model, train_data, test_data)
@@ -120,8 +108,6 @@ if __name__ == '__main__':
 
     # read client config
     client_host = config['client']['host']
-    client_sleep_second = int(config['timeout']['client_sleep_second'])
-    client_sleep_prob = float(config['timeout']['client_sleep_prob'])
 
     # load data
     train_count = int(config['data']['train_count'])
