@@ -102,7 +102,7 @@ def start():
         if curr_min_accuracy >= desired_accuracy:  # break if reach desired accuracy
             break
         else:
-            to_fed_model = model_dict[curr_epoch]
+            to_fed_model = list(model_dict[curr_epoch].values())
             mq.append(logger.get_str(f'Epoch {curr_epoch}: Do FedAvg with {len(to_fed_model)} models'))
             model = fed_avg(to_fed_model)
             curr_epoch += 1
@@ -117,10 +117,11 @@ def on_receive(port):
     if request.method == 'POST':
         client_port = int(port)
         client_epoch = int(request.args.get('curr_epoch'))
+        client_train_count = int(request.args.get('train_count'))
         pickled_model = request.get_data()
         model = pickle.loads(pickled_model)
         assert isinstance(model, CNN)
-        model_dict[client_epoch][client_port] = model
+        model_dict[client_epoch][client_port] = {'model': model, 'count': client_train_count}
         mq.append(logger.get_str(f'Epoch {client_epoch}: Receive data from client : {client_port}'))
 
     return 'Returned from server on_receive'

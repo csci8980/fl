@@ -80,7 +80,7 @@ def on_receive():
 
         # send to server
         pickled_model = pickle.dumps(updated_model)
-        url_params = {'client_port': client_port, 'curr_epoch': curr_epoch, 'accuracy': accuracy}
+        url_params = {'client_port': client_port, 'curr_epoch': curr_epoch, 'accuracy': accuracy, 'train_count': train_count}
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Send model to server'))
         r = requests.post(url=server_url, data=pickled_model, params=url_params)
         if r.status_code == 200:
