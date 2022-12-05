@@ -101,7 +101,7 @@ def thread_send_model(cid, curr_epoch, pickled_model):
 # broadcast model and wait for client response in a multi-thread way
 def broadcast_model(model, curr_epoch):
     pickled_model = pickle.dumps(model)
-    with ThreadPoolExecutor(max_workers=6) as thread_pool:
+    with ThreadPoolExecutor(max_workers=10) as thread_pool:
         futures = [thread_pool.submit(thread_send_model, c, curr_epoch, pickled_model) for c in client_dict]
 
         # iterate future objects
