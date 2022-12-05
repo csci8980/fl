@@ -12,7 +12,7 @@ import requests
 from flask import Flask, redirect, request, url_for
 
 from CNN import CNN
-from FedAlgorithm import fed_avg
+from FedAlgorithm import fed_avg, fed_nova
 from client import Client
 from logger import Logger
 
@@ -106,7 +106,10 @@ def start():
             to_fed_model = list(model_dict[curr_epoch].values())
             mq.append(logger.get_str(f'Epoch {curr_epoch}: Do FedLearning with {len(to_fed_model)} models'))
             print("current model is ", to_fed_model)
-            model = fed_avg(to_fed_model)
+            if model_name == "FedNova":
+                model = fed_nova(to_fed_model)
+            else:
+                model = fed_avg(to_fed_model)
             curr_epoch += 1
 
     mq.append(logger.get_str(f'Federated learning ends after {curr_epoch} epochs with accuracy {curr_min_accuracy}'))
@@ -120,10 +123,12 @@ def on_receive(port):
         client_port = int(port)
         client_epoch = int(request.args.get('curr_epoch'))
         client_train_count = int(request.args.get('train_count'))
+        client_tau = int(request.args.get('tau'))
+        print('tau in sever is',client_tau)
         pickled_model = request.get_data()
         model = pickle.loads(pickled_model)
         assert isinstance(model, CNN)
-        model_dict[client_epoch][client_port] = {'model': model, 'count': client_train_count}
+        model_dict[client_epoch][client_port] = {'model': model, 'count': client_train_count,'tau':client_tau}
         mq.append(logger.get_str(f'Epoch {client_epoch}: Receive data from client : {client_port}'))
 
     return 'Returned from server on_receive'

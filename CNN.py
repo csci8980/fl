@@ -53,6 +53,7 @@ def train(num_epochs, cnn, loaders,model_name):
     optimizer = optim.Adam(cnn.parameters(), lr=0.01)
     deepcopy_cnn = copy.deepcopy(cnn)
     global_weight_collector = list(deepcopy_cnn.parameters())
+    tau = 0
 
     cnn.train()
     # Train the model
@@ -77,6 +78,8 @@ def train(num_epochs, cnn, loaders,model_name):
                     print(global_weight_collector[param_index])
                 loss += fed_prox_reg
 
+            if model_name == "FedNova":
+                tau = tau + 1
 
             # clear gradients for this training step
             optimizer.zero_grad()
@@ -86,12 +89,12 @@ def train(num_epochs, cnn, loaders,model_name):
             # apply gradients
             optimizer.step()
 
-            if (i + 1) % 100 == 0:
+            #if (i + 1) % 100 == 0:
                 # mq.append(logger.get_str(f'Local epoch is {epoch + 1}. Loss is {loss.item()}'))
                 # print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' .format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
-                pass
-        pass
-    pass
+                #pass
+
+    return tau
 
 
 def test(model, loaders):
@@ -125,6 +128,7 @@ def update_model(model, train_data, test_data,model_name):
                'test': torch.utils.data.DataLoader(test_data, batch_size=100, shuffle=True, num_workers=1), }
 
     num_epochs = 1
-    train(num_epochs, model, loaders, model_name)
+    tau = train(num_epochs, model, loaders, model_name)
+    print("tau is", tau)
     accuracy = test(model, loaders)
-    return model, accuracy
+    return model, accuracy, tau

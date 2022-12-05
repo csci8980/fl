@@ -76,12 +76,12 @@ def on_receive():
 
         # update model
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Start client training'))
-        updated_model, accuracy = update_model(model, train_data, test_data,model_name)
+        updated_model, accuracy,tau = update_model(model, train_data, test_data,model_name)
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Done client training'))
 
         # send to server
         pickled_model = pickle.dumps(updated_model)
-        url_params = {'client_port': client_port, 'curr_epoch': curr_epoch, 'accuracy': accuracy, 'train_count': train_count}
+        url_params = {'client_port': client_port, 'curr_epoch': curr_epoch, 'accuracy': accuracy, 'train_count': train_count,'tau':tau}
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Send model to server'))
         r = requests.post(url=server_url, data=pickled_model, params=url_params)
         if r.status_code == 200:
