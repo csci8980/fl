@@ -130,5 +130,8 @@ dmypy.json
 
 # Customized
 .DS_Store
-/data
+/data/EMNIST
+/data/FashionMNIST
+/data/SampledMNIST
+/data/SampledEMNIST/raw
 /.idea
