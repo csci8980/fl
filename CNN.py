@@ -69,7 +69,8 @@ def train(num_epochs, cnn, loaders,model_name):
             loss = loss_func(output, b_y)
 
             #FedProx
-            if model_name == "FedProx" or "FedMix":
+            print("model_name is",model_name)
+            if model_name == "FedProx" or model_name =="FedMix":
                 mu = 0.001
                 fed_prox_reg = 0.0
                 for param_index, param in enumerate(cnn.parameters()):
