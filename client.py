@@ -77,6 +77,7 @@ def on_receive():
         # update model
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Start client training'))
         updated_model, accuracy,tau = update_model(model, train_data, test_data,model_name)
+        print("Here updated model is",updated_model)
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Done client training'))
 
         # send to server

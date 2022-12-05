@@ -69,7 +69,7 @@ def train(num_epochs, cnn, loaders,model_name):
             loss = loss_func(output, b_y)
 
             #FedProx
-            if model_name == "FedProx":
+            if model_name == "FedProx" or "FedMix":
                 mu = 0.001
                 fed_prox_reg = 0.0
                 for param_index, param in enumerate(cnn.parameters()):
@@ -78,12 +78,11 @@ def train(num_epochs, cnn, loaders,model_name):
                     print(global_weight_collector[param_index])
                 loss += fed_prox_reg
 
-            if model_name == "FedNova":
+            if model_name == "FedNova" or "FedMix":
                 tau = tau + 1
 
             # clear gradients for this training step
             optimizer.zero_grad()
-
             # backpropagation, compute gradients
             loss.backward()
             # apply gradients
@@ -93,7 +92,6 @@ def train(num_epochs, cnn, loaders,model_name):
                 # mq.append(logger.get_str(f'Local epoch is {epoch + 1}. Loss is {loss.item()}'))
                 # print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' .format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
                 #pass
-
     return tau
 
 

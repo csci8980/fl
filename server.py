@@ -106,7 +106,7 @@ def start():
             to_fed_model = list(model_dict[curr_epoch].values())
             mq.append(logger.get_str(f'Epoch {curr_epoch}: Do FedLearning with {len(to_fed_model)} models'))
             print("current model is ", to_fed_model)
-            if model_name == "FedNova":
+            if model_name == "FedNova" or "FedMix":
                 model = fed_nova(to_fed_model)
             else:
                 model = fed_avg(to_fed_model)
