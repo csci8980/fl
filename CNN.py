@@ -28,7 +28,7 @@ class CNN(nn.Module):
             nn.MaxPool2d(2),
         )
         # fully connected layer, output 10 classes
-        self.out = nn.Linear(32 * 7 * 7, 10)
+        self.out = nn.Linear(32 * 7 * 7, 62)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -39,7 +39,7 @@ class CNN(nn.Module):
         return output, x
 
 
-def train(num_epochs, cnn, loaders,model_name):
+def train(num_epochs, cnn, loaders, model_name):
     """
     ML train function
     :param num_epochs:
@@ -68,13 +68,13 @@ def train(num_epochs, cnn, loaders,model_name):
             output = cnn(b_x)[0]
             loss = loss_func(output, b_y)
 
-            #FedProx
-            print("model_name is",model_name)
-            if model_name == "FedProx" or model_name =="FedMix":
+            # FedProx
+            print("model_name is", model_name)
+            if model_name == "FedProx" or model_name == "FedMix":
                 mu = 0.001
                 fed_prox_reg = 0.0
                 for param_index, param in enumerate(cnn.parameters()):
-                    fed_prox_reg += ((mu / 2) * torch.norm((param - global_weight_collector[param_index]))**2)
+                    fed_prox_reg += ((mu / 2) * torch.norm((param - global_weight_collector[param_index])) ** 2)
                     print(param)
                     print(global_weight_collector[param_index])
                 loss += fed_prox_reg
@@ -89,10 +89,10 @@ def train(num_epochs, cnn, loaders,model_name):
             # apply gradients
             optimizer.step()
 
-            #if (i + 1) % 100 == 0:
-                # mq.append(logger.get_str(f'Local epoch is {epoch + 1}. Loss is {loss.item()}'))
-                # print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' .format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
-                #pass
+            # if (i + 1) % 100 == 0:
+            # mq.append(logger.get_str(f'Local epoch is {epoch + 1}. Loss is {loss.item()}'))
+            # print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' .format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
+            # pass
     return tau
 
 
@@ -115,7 +115,7 @@ def test(model, loaders):
         return accuracy
 
 
-def update_model(model, train_data, test_data,model_name):
+def update_model(model, train_data, test_data, model_name):
     """
     load data, train and test model
     :param model:

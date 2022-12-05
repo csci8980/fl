@@ -30,6 +30,7 @@ def home():
     '''
     html += f'<h2>Stop accuracy: {desired_accuracy}</h2>'
     html += f'<h2>Maximum epoch: {total_epoch}</h2>'
+    html += f'<h2>Fed algo: {model_name}</h2>'
     html += f'<h2>Current client count: {len(client_dict)}, ID (port):[{", ".join(map(str, client_dict))}]</h2>'
     html += dashboard.to_html()
 
