@@ -26,3 +26,6 @@ def fed_avg(models):
     new_model = CNN()
     new_model.load_state_dict(avg_model_sd)
     return new_model
+
+def fed_nova(models,tau):
+    return 0

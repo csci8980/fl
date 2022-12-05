@@ -12,7 +12,7 @@ import requests
 from flask import Flask, redirect, request, url_for
 
 from CNN import CNN
-from FedAvg import fed_avg
+from FedAlgorithm import fed_avg
 from client import Client
 from logger import Logger
 
@@ -64,7 +64,8 @@ def register(client_port):
 def thread_send_model(cid, curr_epoch, pickled_model):
     client = client_dict[cid]
     mq.append(logger.get_str(f'Epoch {curr_epoch}: Send model to {cid}'))
-    url_params = {'curr_epoch': curr_epoch}
+    url_params = {'curr_epoch': curr_epoch,'model_name':model_name}
+    print("model name is",model_name)
     return requests.post(url=client.url, data=pickled_model, params=url_params)
 
 
@@ -103,7 +104,8 @@ def start():
             break
         else:
             to_fed_model = list(model_dict[curr_epoch].values())
-            mq.append(logger.get_str(f'Epoch {curr_epoch}: Do FedAvg with {len(to_fed_model)} models'))
+            mq.append(logger.get_str(f'Epoch {curr_epoch}: Do FedLearning with {len(to_fed_model)} models'))
+            print("current model is ", to_fed_model)
             model = fed_avg(to_fed_model)
             curr_epoch += 1
 
@@ -136,6 +138,7 @@ if __name__ == '__main__':
 
     # read ML config
     total_epoch = int(config['ml']['epoch'])
+    model_name = config['ml']['model_name']
     desired_accuracy = float(config['ml']['accuracy'])
 
     # init client model cache

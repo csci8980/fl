@@ -71,11 +71,12 @@ def on_receive():
         model = pickle.loads(pickled_model)
         assert isinstance(model, CNN)
         curr_epoch = int(request.args.get('curr_epoch'))
+        model_name = request.args.get('model_name')
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Receive model from server'))
 
         # update model
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Start client training'))
-        updated_model, accuracy = update_model(model, train_data, test_data)
+        updated_model, accuracy = update_model(model, train_data, test_data,model_name)
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Done client training'))
 
         # send to server

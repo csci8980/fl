@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 from torch import optim
 from torch.autograd import Variable
+import copy
 
 
 class CNN(nn.Module):
@@ -38,7 +39,7 @@ class CNN(nn.Module):
         return output, x
 
 
-def train(num_epochs, cnn, loaders):
+def train(num_epochs, cnn, loaders,model_name):
     """
     ML train function
     :param num_epochs:
@@ -46,9 +47,12 @@ def train(num_epochs, cnn, loaders):
     :param loaders:
     :return:
     """
+
     # mq.append(logger.get_str(f'Local training starts'))
     loss_func = nn.CrossEntropyLoss()
     optimizer = optim.Adam(cnn.parameters(), lr=0.01)
+    deepcopy_cnn = copy.deepcopy(cnn)
+    global_weight_collector = list(deepcopy_cnn.parameters())
 
     cnn.train()
     # Train the model
@@ -62,6 +66,17 @@ def train(num_epochs, cnn, loaders):
             b_y = Variable(labels)  # batch y
             output = cnn(b_x)[0]
             loss = loss_func(output, b_y)
+
+            #FedProx
+            if model_name == "FedProx":
+                mu = 0.001
+                fed_prox_reg = 0.0
+                for param_index, param in enumerate(cnn.parameters()):
+                    fed_prox_reg += ((mu / 2) * torch.norm((param - global_weight_collector[param_index]))**2)
+                    print(param)
+                    print(global_weight_collector[param_index])
+                loss += fed_prox_reg
+
 
             # clear gradients for this training step
             optimizer.zero_grad()
@@ -98,7 +113,7 @@ def test(model, loaders):
         return accuracy
 
 
-def update_model(model, train_data, test_data):
+def update_model(model, train_data, test_data,model_name):
     """
     load data, train and test model
     :param model:
@@ -110,6 +125,6 @@ def update_model(model, train_data, test_data):
                'test': torch.utils.data.DataLoader(test_data, batch_size=100, shuffle=True, num_workers=1), }
 
     num_epochs = 1
-    train(num_epochs, model, loaders)
+    train(num_epochs, model, loaders, model_name)
     accuracy = test(model, loaders)
     return model, accuracy
