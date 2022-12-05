@@ -20,8 +20,9 @@ def get_zipf(a=2.0, n_label=62):
 
 def plot_zipf(a=2.0, n_label=62):
     k = np.arange(1, n_label + 1)
-    nd = get_zipf(n_label)
+    nd = get_zipf(a=a, n_label=n_label)
     plt.plot(k - 1, nd, '.-', label='Zipf PDF')
+    plt.plot(k - 1, np.repeat(1 / n_label, n_label), '.-', label='Even PDF')
     plt.semilogy()
     plt.grid(alpha=0.4)
     plt.legend()
