@@ -32,7 +32,7 @@ def save_data_and_fig(df):
     client = len(df)
     for c in range(client):
         c_label = f'{df.iat[c, 3]}_{df.iat[c, 4]}'
-        if df.at[c, "label_dist"] == 'zipf':
+        if df.iat[c, 3] == 'zipf':
             plt.plot(range(epoch), df.loc[c, [str(i) for i in range(epoch)]], 'x-r', alpha=1, label=c_label)
         else:
             plt.plot(range(epoch), df.loc[c, [str(i) for i in range(epoch)]], '.-', alpha=0.6, label=c_label)
