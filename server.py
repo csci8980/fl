@@ -56,6 +56,7 @@ def register(client_port):
             dashboard.loc[client.id, 'train_count'] = request.args.get('train_count')
             dashboard.loc[client.id, 'test_count'] = request.args.get('test_count')
             dashboard.loc[client.id, 'label_dist'] = request.args.get('label_dist')
+            dashboard.loc[client.id, 'data_count'] = request.args.get('data_count')
 
     return redirect(url_for('home'))
 
@@ -65,7 +66,7 @@ def thread_send_model(cid, curr_epoch, pickled_model):
     client = client_dict[cid]
     mq.append(logger.get_str(f'Epoch {curr_epoch}: Send model to {cid}'))
     url_params = {'curr_epoch': curr_epoch, 'model_name': model_name}
-    print("model name is", model_name)
+    # print("model name is", model_name)
     return requests.post(url=client.url, data=pickled_model, params=url_params)
 
 
@@ -105,7 +106,7 @@ def start():
         else:
             to_fed_model = list(model_dict[curr_epoch].values())
             mq.append(logger.get_str(f'Epoch {curr_epoch}: Do FedLearning with {len(to_fed_model)} models'))
-            print("current model is ", to_fed_model)
+            # print("current model is ", to_fed_model)
             if model_name == "FedNova" or model_name == "FedMix":
                 model = fed_nova(to_fed_model)
             else:
@@ -124,7 +125,7 @@ def on_receive(port):
         client_epoch = int(request.args.get('curr_epoch'))
         client_train_count = int(request.args.get('train_count'))
         client_tau = int(request.args.get('tau'))
-        print('tau in sever is', client_tau)
+        # print('tau in sever is', client_tau)
         pickled_model = request.get_data()
         model = pickle.loads(pickled_model)
         assert isinstance(model, CNN)
@@ -155,7 +156,7 @@ if __name__ == '__main__':
     # init logger, mq and dashboard
     logger = Logger('Server')
     mq = [logger.get_str('Server start.')]
-    client_info = ['train_count', 'test_count', 'label_dist']
+    client_info = ['train_count', 'test_count', 'label_dist', 'data_count']
     dashboard = pd.DataFrame(columns=client_info + list(range(total_epoch)))
 
     # start server

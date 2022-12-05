@@ -69,7 +69,7 @@ def train(num_epochs, cnn, loaders, model_name):
             loss = loss_func(output, b_y)
 
             # FedProx
-            print("model_name is", model_name)
+            # print("model_name is", model_name)
             if model_name == "FedProx" or model_name == "FedMix":
                 mu = 0.001
                 fed_prox_reg = 0.0

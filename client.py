@@ -51,7 +51,8 @@ def register():
                   'client_port': client_port,
                   'train_count': train_count,
                   'test_count': test_count,
-                  'label_dist': dist}
+                  'label_dist': dist,
+                  'data_count': count}
     r = requests.post(url=f'http://127.0.0.1:5000/register/{client_port}', params=url_params)  # register client
     if r.status_code == 200:
         mq.append(logger.get_str('Successfully register client'))
@@ -76,7 +77,7 @@ def on_receive():
         # update model
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Start client training'))
         updated_model, accuracy, tau = update_model(model, train_data, test_data, model_name)
-        print("Here updated model is", updated_model)
+        # print("Here updated model is", updated_model)
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Done client training'))
 
         # send to server
