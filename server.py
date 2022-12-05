@@ -5,7 +5,9 @@ import configparser
 import pickle
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
+from datetime import datetime
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import requests
@@ -17,6 +19,32 @@ from client import Client
 from logger import Logger
 
 app = Flask(__name__)
+
+
+def save_data_and_fig(df):
+    current_time = datetime.now().strftime('%H_%M_%S')
+    title = f'{model_name}_{current_time}'
+    csv_name = f'{title}.csv'
+    dashboard.to_csv(csv_name, index_label='port')
+
+    # plot
+    epoch = df.shape[1] - 5
+    client = len(df)
+    for c in range(client):
+        c_label = f'{df.iat[c, 3]}_{df.iat[c, 4]}'
+        if df.at[c, "label_dist"] == 'zipf':
+            plt.plot(range(epoch), df.loc[c, [str(i) for i in range(epoch)]], 'x-r', alpha=1, label=c_label)
+        else:
+            plt.plot(range(epoch), df.loc[c, [str(i) for i in range(epoch)]], '.-', alpha=0.6, label=c_label)
+
+    plt.grid(alpha=0.3)
+    plt.legend(loc='lower right', ncols=2)
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.xticks([i for i in range(epoch)])
+    plt.yticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+    plt.title(model_name)
+    plt.savefig(f'{title}.png', dpi=360)
 
 
 # home page
@@ -108,12 +136,17 @@ def start():
             mq.append(logger.get_str(f'Epoch {curr_epoch}: Do FedLearning with {len(to_fed_model)} models'))
             # print("current model is ", to_fed_model)
             if model_name == "FedNova" or model_name == "FedMix":
+                print(f'Epoch {curr_epoch}: do {model_name}')
                 model = fed_nova(to_fed_model)
             else:
+                print(f'Epoch {curr_epoch}: do FedAvg')
                 model = fed_avg(to_fed_model)
             curr_epoch += 1
 
     mq.append(logger.get_str(f'Federated learning ends after {curr_epoch} epochs with accuracy {curr_min_accuracy}'))
+
+    save_data_and_fig(dashboard)
+
     return redirect(url_for('home'))
 
 
