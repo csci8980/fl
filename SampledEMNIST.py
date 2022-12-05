@@ -1,3 +1,4 @@
+import pickle
 from typing import Callable, Optional
 
 import matplotlib.pyplot as plt
@@ -5,6 +6,7 @@ import numpy as np
 import torch
 from scipy.special import zeta
 from torchvision import datasets
+from torchvision.transforms import ToTensor
 
 
 # train_data = datasets.EMNIST(root='data', split='byclass', train=True, download=True)
@@ -48,7 +50,8 @@ class SampledEMNIST(datasets.EMNIST):
                  download: bool = True,
                  iid: bool = True,
                  n_total: int = 1000,
-                 n_label: int = 62) -> None:
+                 n_label: int = 62,
+                 zipf_label_offset: int = 0) -> None:
         super().__init__(
             root=root,
             split=split,
@@ -66,7 +69,14 @@ class SampledEMNIST(datasets.EMNIST):
         else:
             print('Generate niid dataset')
             label_count_dict = get_zipf_label_count(n_label=n_label, n_total=n_total)
+            # swap label count
+            zipf_label_count = label_count_dict[0]
+            label_count_dict[0] = label_count_dict[zipf_label_offset]
+            label_count_dict[zipf_label_offset] = zipf_label_count
 
+        for i in label_count_dict:
+            if label_count_dict[i] == 0:
+                label_count_dict[i] = 1
         print(label_count_dict)
 
         # sample dataset based on label count dict
@@ -94,24 +104,30 @@ class SampledEMNIST(datasets.EMNIST):
 
 if __name__ == '__main__':
     # 10 clients
-
     # train, test
     # distribution: even, zipf
     # count: train: 6000, 600
     # count: test : 1000, 100
     # name: <tt>_<dist>_<count>_<#>.pkl
-    from torchvision.transforms import ToTensor
-    import pickle
 
-    for dist in ['even', 'zipf']:
-        if dist == 'even':
-            iid = True
+    for tt in ['train', 'test']:
+        if tt == 'train':
+            train = True
+            total_list = [6000, 600]
         else:
-            iid = False
-        for total in [1000, 100]:
-            for i in range(10):
-                a = SampledEMNIST(root='data', train=False, transform=ToTensor(), download=True, iid=iid, n_total=total)
-                name = f'test_{dist}_{total}_{i}.pkl'
-                print(name)
-                with open(f'data/SampledEMNIST/pickle/{name}', 'wb') as file:
-                    pickle.dump(a, file)
+            train = False
+            total_list = [1000, 100]
+
+        for dist in ['even', 'zipf']:
+            if dist == 'even':
+                iid = True
+            else:
+                iid = False
+
+            for total in total_list:
+                for i in range(10):
+                    a = SampledEMNIST(root='data', train=train, transform=ToTensor(), download=True, iid=iid, n_total=total, zipf_label_offset=i)
+                    name = f'{tt}_{dist}_{total}_{i}.pkl'
+                    print(name)
+                    with open(f'data/SampledEMNIST/pickle/{name}', 'wb') as file:
+                        pickle.dump(a, file)
