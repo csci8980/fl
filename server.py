@@ -54,8 +54,7 @@ def register(client_port):
             # client info
             dashboard.loc[client.id, 'train_count'] = request.args.get('train_count')
             dashboard.loc[client.id, 'test_count'] = request.args.get('test_count')
-            dashboard.loc[client.id, 'skew_label'] = request.args.get('skew_label')
-            dashboard.loc[client.id, 'skew_prop'] = request.args.get('skew_prop')
+            dashboard.loc[client.id, 'label_dist'] = request.args.get('label_dist')
 
     return redirect(url_for('home'))
 
@@ -64,8 +63,8 @@ def register(client_port):
 def thread_send_model(cid, curr_epoch, pickled_model):
     client = client_dict[cid]
     mq.append(logger.get_str(f'Epoch {curr_epoch}: Send model to {cid}'))
-    url_params = {'curr_epoch': curr_epoch,'model_name':model_name}
-    print("model name is",model_name)
+    url_params = {'curr_epoch': curr_epoch, 'model_name': model_name}
+    print("model name is", model_name)
     return requests.post(url=client.url, data=pickled_model, params=url_params)
 
 
@@ -124,11 +123,11 @@ def on_receive(port):
         client_epoch = int(request.args.get('curr_epoch'))
         client_train_count = int(request.args.get('train_count'))
         client_tau = int(request.args.get('tau'))
-        print('tau in sever is',client_tau)
+        print('tau in sever is', client_tau)
         pickled_model = request.get_data()
         model = pickle.loads(pickled_model)
         assert isinstance(model, CNN)
-        model_dict[client_epoch][client_port] = {'model': model, 'count': client_train_count,'tau':client_tau}
+        model_dict[client_epoch][client_port] = {'model': model, 'count': client_train_count, 'tau': client_tau}
         mq.append(logger.get_str(f'Epoch {client_epoch}: Receive data from client : {client_port}'))
 
     return 'Returned from server on_receive'
@@ -155,7 +154,7 @@ if __name__ == '__main__':
     # init logger, mq and dashboard
     logger = Logger('Server')
     mq = [logger.get_str('Server start.')]
-    client_info = ['train_count', 'test_count', 'skew_label', 'skew_prop']
+    client_info = ['train_count', 'test_count', 'label_dist']
     dashboard = pd.DataFrame(columns=client_info + list(range(total_epoch)))
 
     # start server

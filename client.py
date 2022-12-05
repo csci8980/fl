@@ -4,14 +4,14 @@
 
 import argparse
 import configparser
+import json
 import pickle
 
 import requests
 from flask import Flask, request, redirect, url_for, jsonify
-from torchvision.transforms import ToTensor
 
 from CNN import CNN, update_model
-from SampledMNIST import SampledMNIST
+from SampledEMNIST import SampledEMNIST
 from logger import Logger
 
 
@@ -51,8 +51,7 @@ def register():
                   'client_port': client_port,
                   'train_count': train_count,
                   'test_count': test_count,
-                  'skew_label': skew_label,
-                  'skew_prop': skew_prop}
+                  'label_dist': dist}
     r = requests.post(url=f'http://127.0.0.1:5000/register/{client_port}', params=url_params)  # register client
     if r.status_code == 200:
         mq.append(logger.get_str('Successfully register client'))
@@ -76,13 +75,13 @@ def on_receive():
 
         # update model
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Start client training'))
-        updated_model, accuracy,tau = update_model(model, train_data, test_data,model_name)
-        print("Here updated model is",updated_model)
+        updated_model, accuracy, tau = update_model(model, train_data, test_data, model_name)
+        print("Here updated model is", updated_model)
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Done client training'))
 
         # send to server
         pickled_model = pickle.dumps(updated_model)
-        url_params = {'client_port': client_port, 'curr_epoch': curr_epoch, 'accuracy': accuracy, 'train_count': train_count,'tau':tau}
+        url_params = {'client_port': client_port, 'curr_epoch': curr_epoch, 'accuracy': accuracy, 'train_count': train_count, 'tau': tau}
         mq.append(logger.get_str(f'Epoch {curr_epoch}: Send model to server'))
         r = requests.post(url=server_url, data=pickled_model, params=url_params)
         if r.status_code == 200:
@@ -90,6 +89,37 @@ def on_receive():
         else:
             print('\n !!! Client: Something wrong when client send model to server !!! \n')
             return '', 204
+
+
+def get_data_profile(port, data_profile_dict):
+    if str(port) in data_profile_dict:
+        profile = data_profile_dict[str(port)].split('_')
+        dist = profile[0]
+        count = profile[1]
+        return dist, count
+    else:
+        # default 'even_more'
+        return 'even', 'more'
+
+
+def load_data(port, dist, count):
+    if count == 'more':
+        train_count = 6000
+        test_count = 1000
+    else:
+        train_count = 600
+        test_count = 100
+    num = port - 5001
+    train_data_name = f'train_{dist}_{train_count}_{num}.pkl'
+    test_data_name = f'test_{dist}_{test_count}_{num}.pkl'
+    prefix = 'data/SampledEMNIST/pickle/'
+    with open(prefix + train_data_name, 'rb') as file:
+        train_data = pickle.load(file)
+        assert isinstance(train_data, SampledEMNIST)
+    with open(prefix + test_data_name, 'rb') as file:
+        test_data = pickle.load(file)
+        assert isinstance(test_data, SampledEMNIST)
+    return train_data, test_data
 
 
 if __name__ == '__main__':
@@ -112,19 +142,11 @@ if __name__ == '__main__':
     client_host = config['client']['host']
 
     # load data
-    train_count = int(config['data']['train_count'])
-    test_count = int(config['data']['test_count'])
-    skew_client_port = int(config['data']['skew_client_port'])
-    skew_label = int(config['data']['skew_label'])
-    skew_prop = int(config['data']['skew_prop'])
-    if client_port != skew_client_port:
-        skew_label = -1
-        skew_prop = -1
-        train_data = SampledMNIST(root='data', train=True, transform=ToTensor(), download=True, n_total=train_count)
-        test_data = SampledMNIST(root='data', train=False, transform=ToTensor(), download=True, n_total=test_count)
-    else:
-        train_data = SampledMNIST(root='data', train=True, transform=ToTensor(), download=True, n_total=train_count, skew_label=skew_label, skew_prop=skew_prop)
-        test_data = SampledMNIST(root='data', train=False, transform=ToTensor(), download=True, n_total=test_count, skew_label=skew_label, skew_prop=skew_prop)
+    profile_dict = json.loads(config['data']['profile'].replace('\n', ''))
+    dist, count = get_data_profile(client_port, profile_dict)
+    train_data, test_data = load_data(client_port, dist, count)
+    train_count = len(train_data)
+    test_count = len(test_data)
 
     # init logger and dashboard mq
     logger = Logger(f'Client {client_port}')
