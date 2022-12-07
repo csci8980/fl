@@ -7,7 +7,6 @@ from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import as_completed
 from datetime import datetime
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import requests
@@ -27,25 +26,25 @@ def save_data_and_fig(df):
     csv_name = f'{title}.csv'
     df.to_csv(csv_name, index_label='port')
 
-    # plot
-    df = df.reset_index(names='port')
-    epoch = df.shape[1] - 5
-    client = len(df)
-    for c in range(client):
-        c_label = f'{df.at[c, "label_dist"]}_{df.at[c, "data_count"]}'
-        if df.at[c, "label_dist"] == 'zipf':
-            plt.plot(range(epoch), df.loc[c, [str(i) for i in range(epoch)]], 'x-r', alpha=1, label=c_label)
-        else:
-            plt.plot(range(epoch), df.loc[c, [str(i) for i in range(epoch)]], '.-', alpha=0.6, label=c_label)
-
-    plt.grid(alpha=0.3)
-    plt.legend(loc='lower right', ncols=2)
-    plt.xlabel('Epoch')
-    plt.ylabel('Accuracy')
-    plt.xticks([i for i in range(epoch)])
-    plt.yticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
-    plt.title(model_name)
-    plt.savefig(f'{title}.png', dpi=360)
+    # # plot
+    # df = df.reset_index(names='port')
+    # epoch = df.shape[1] - 5
+    # client = len(df)
+    # for c in range(client):
+    #     c_label = f'{df.at[c, "label_dist"]}_{df.at[c, "data_count"]}'
+    #     if df.at[c, "label_dist"] == 'zipf':
+    #         plt.plot(range(epoch), df.loc[c, [i for i in range(epoch)]], 'x-r', alpha=1, label=c_label)
+    #     else:
+    #         plt.plot(range(epoch), df.loc[c, [i for i in range(epoch)]], '.-', alpha=0.6, label=c_label)
+    #
+    # plt.grid(alpha=0.3)
+    # plt.legend(loc='lower right', ncols=2)
+    # plt.xlabel('Epoch')
+    # plt.ylabel('Accuracy')
+    # plt.xticks([i for i in range(epoch)])
+    # plt.yticks([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+    # plt.title(model_name)
+    # plt.savefig(f'{title}.png', dpi=360)
 
 
 # home page
