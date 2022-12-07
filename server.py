@@ -25,14 +25,15 @@ def save_data_and_fig(df):
     current_time = datetime.now().strftime('%H_%M_%S')
     title = f'{model_name}_{current_time}'
     csv_name = f'{title}.csv'
-    dashboard.to_csv(csv_name, index_label='port')
+    df.to_csv(csv_name, index_label='port')
 
     # plot
+    df = df.reset_index(names='port')
     epoch = df.shape[1] - 5
     client = len(df)
     for c in range(client):
-        c_label = f'{df.iat[c, 3]}_{df.iat[c, 4]}'
-        if df.iat[c, 3] == 'zipf':
+        c_label = f'{df.at[c, "label_dist"]}_{df.at[c, "data_count"]}'
+        if df.at[c, "label_dist"] == 'zipf':
             plt.plot(range(epoch), df.loc[c, [str(i) for i in range(epoch)]], 'x-r', alpha=1, label=c_label)
         else:
             plt.plot(range(epoch), df.loc[c, [str(i) for i in range(epoch)]], '.-', alpha=0.6, label=c_label)
