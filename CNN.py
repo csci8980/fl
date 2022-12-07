@@ -75,8 +75,8 @@ def train(num_epochs, cnn, loaders, model_name):
                 fed_prox_reg = 0.0
                 for param_index, param in enumerate(cnn.parameters()):
                     fed_prox_reg += ((mu / 2) * torch.norm((param - global_weight_collector[param_index])) ** 2)
-                    print(param)
-                    print(global_weight_collector[param_index])
+                    # print(param)
+                    # print(global_weight_collector[param_index])
                 loss += fed_prox_reg
 
             if model_name == "FedNova" or "FedMix":
