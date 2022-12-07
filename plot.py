@@ -18,7 +18,8 @@ if __name__ == '__main__':
     client = len(df)
     for c in range(client):
         c_label = f'{df.at[c, "label_dist"]}_{df.at[c, "data_count"]}'
-        if df.at[c, "label_dist"] == 'zipf':
+        dist, count = c_label.split('_')
+        if dist == 'zipf' or count == 'less':
             plt.plot(range(epoch), df.loc[c, [str(i) for i in range(epoch)]], 'x-r', alpha=1, label=c_label)
         else:
             plt.plot(range(epoch), df.loc[c, [str(i) for i in range(epoch)]], '.-', alpha=0.6, label=c_label)
